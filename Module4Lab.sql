@@ -16,11 +16,11 @@ SELECT ProductName, UnitPrice FROM Products WHERE UnitPrice > (SELECT AVG(UnitPr
 
 -- this query we limit the result to the top 5 records
 SELECT TOP 5 
-c.CustomerID, c.CompanyName,
-ROUND(SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)), 2) AS TotalPurchase
+c.CustomerID, c.CompanyName, 
+ROUND(SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)), 2) AS TotalPurchase 
 FROM Customers c 
-INNER JOIN o ON c.CustomerID = o.CustomerID
-INNER JOIN [Order Detailes] od ON o.OrderID = od.OrderID
-WHERE YEAR(o.OrderDate) = 1997
-GROUP BY c.CustomerID, c.CompanyName
+INNER JOIN Orders o ON c.CustomerID = o.CustomerID 
+INNER JOIN [Order Details] od ON o.OrderID = od.OrderID 
+WHERE YEAR(o.OrderDate) = 1997  
+GROUP BY c.CustomerID, c.CompanyName 
 ORDER BY TotalPurchase DESC;
