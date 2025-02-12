@@ -24,3 +24,15 @@ INNER JOIN [Order Details] od ON o.OrderID = od.OrderID
 WHERE YEAR(o.OrderDate) = 1997  
 GROUP BY c.CustomerID, c.CompanyName 
 ORDER BY TotalPurchase DESC;
+USE Northwind; -- Ensure you're in the correct database
+
+SELECT 
+    o.CustomerID, 
+    CAST(SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS DECIMAL(18,2)) AS TotalRevenue,
+    COUNT(DISTINCT o.OrderID) AS OrderCount
+FROM dbo.Orders o
+JOIN dbo.[Order Details] od ON o.OrderID = od.OrderID
+WHERE YEAR(o.OrderDate) = 1997
+GROUP BY o.CustomerID
+ORDER BY TotalRevenue DESC;
+
