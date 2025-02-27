@@ -39,6 +39,22 @@ VALUES
 
 -- create view 
 -- Create a view that pulls data from the Authors and the Books tables
+CREATE VIEW BookDetails AS
+SELECT 
+    b.BookID,
+    b.Title,
+    a.FirstName + ' ' + a.LastName AS AuthorName,
+    b.PublicationYear,
+    b.Price
+FROM 
+    Books b
+JOIN 
+    Authors a ON b.AuthorID = a.AuthorID;
+
+
+-- create a filtered view
+-- create a view named RecentBooks that shows books published after the year 1990
+
 CREATE VIEW RecentBooks AS
 SELECT 
     BookID,
@@ -50,18 +66,89 @@ FROM
 WHERE 
     PublicationYear > 1990;
 
+-- create a view with calculated feilds
+-- Creating a view named AuthorStats that shows the number of books and average price of books for each author
 
--- create a view that combine information from tables 
-CREATE VIEW BookDetails AS
-SELECT b.BookID, b.Title, a.FirstName + '' + a.LastName AS AuthorName, b.PublicationYear, b.Price
-FROM Books b 
-JOIN Authors a ON b.AuthorID = a.AuthorID;
-
-
---create a view that shows the number of books and the average price of books 
 CREATE VIEW AuthorStats AS
-SELECT a.AuthorID, a.FirstName + ' ' + a.LastName AS AuthorName,
-COUNT(b.BookID) AS BookCount,
-AVG(b.Price) AS AverageBookPrice
-FROM Authors a LEFT JOIN Books b ON a.AuthorID = b.AuthorID
-GROUP BY a.AuthorID, a.FirstName, a.LastName;
+SELECT 
+    a.AuthorID,
+    a.FirstName + ' ' + a.LastName AS AuthorName,
+    COUNT(b.BookID) AS BookCount,
+    AVG(b.Price) AS AverageBookPrice
+FROM 
+    Authors a
+LEFT JOIN 
+    Books b ON a.AuthorID = b.AuthorID
+GROUP BY 
+    a.AuthorID, a.FirstName, a.LastName;
+
+-- query te views 
+-- lets write a SQL query the views
+-- retrive all records from the BookDetails view
+SELECT Title, Price FROM BookDetails;
+
+-- list all books from the RecentBooks view
+SELECT * FROM RecentBooks;
+
+-- lets show the statistics for authors 
+SELECT * FROM AuthorStats;
+
+-- create an updateable view
+-- create an updateable view called AuthorContactInfo that allows updating the Author's fisrt and last name 
+
+CREATE VIEW AuthorContactInfo AS
+SELECT 
+    AuthorID,
+    FirstName,
+    LastName
+FROM 
+    Authors;
+
+-- lets update an author's name with this view
+
+UPDATE AuthorContactInfo
+SET FirstName = 'Joanne'
+WHERE AuthorID = 3;
+
+-- let us check by query the view 
+SELECT * FROM AuthorContactInfo;
+
+-- creating an audit trigger
+-- now we will create a trigger that logs all price changes in the books table to a new audit table 
+-- lets first create the audit table 
+CREATE TABLE BookPriceAudit (
+    AuditID INT IDENTITY(1,1) PRIMARY KEY,
+    BookID INT,
+    OldPrice DECIMAL(10,2),
+    NewPrice DECIMAL(10,2),
+    ChangeDate DATETIME DEFAULT GETDATE()
+);
+
+-- then, create the trigger
+
+CREATE TRIGGER trg_BookPriceChange
+ON Books
+AFTER UPDATE
+AS
+BEGIN
+    IF UPDATE(Price)
+    BEGIN
+        INSERT INTO BookPriceAudit (BookID, OldPrice, NewPrice)
+        SELECT 
+            i.BookID,
+            d.Price,
+            i.Price
+        FROM inserted i
+        JOIN deleted d ON i.BookID = d.BookID
+    END
+END;
+
+-- test the trigger by updating the book's price 
+-- update a book's price 
+
+UPDATE Books
+SET Price = 14.99
+WHERE BookID = 1;
+
+-- check the audit table 
+SELECT * FROM BookPriceAudit;
