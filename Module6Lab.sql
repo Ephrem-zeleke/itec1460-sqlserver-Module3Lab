@@ -152,3 +152,101 @@ WHERE BookID = 1;
 
 -- check the audit table 
 SELECT * FROM BookPriceAudit;
+
+
+--part two of lab 
+-- creating a book review table 
+
+CREATE TABLE BookReviews (
+    ReviewID INT PRIMARY KEY, 
+    BookID INT,
+    CustomerID NCHAR(5),
+    Rating INT CHECK (Rating BETWEEN 1 AND 5),
+    ReviewText NVARCHAR (MAX),
+    ReviewDate DATE,
+    FOREIGN KEY (BookID) REFERENCES Books(BookID),
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
+
+-- create a view named vw_BookReviewStats that shows the book title, total number of reviews , average rating and most recent review data
+-- now lets create the view 
+CREATE VIEW vw_BookReviewStats AS 
+SELECT 
+    b.Title AS BookTitle,
+    COUNT(br.ReviewID) AS TotalReview,
+    AVG(br.Rating) AS AverageRating,
+    MAX(br.ReviewDate) AS MostRecentReviewDate
+FROM 
+    Books b
+JOIN
+    BookReviews br ON b.BookID = br.BookID
+GROUP BY 
+    b.Title;
+
+-- create triggers
+-- create a trigger named tr_ValidateReviewDate that prevent reviews from being added with a future date. 
+-- the system will display a message saying like "review data can't be in the future "
+
+CREATE TRIGGER tr_ValidateReviewDate
+ON BookReviews
+AFTER INSERT, UPDATE
+AS
+BEGIN 
+    IF EXISTS (SELECT 1 
+            FROM inserted 
+            WHERE ReviewDate > GETDATE())
+    BEGIN
+        THROW 50001, 'Review date can not be in the future.', 1;
+        ROLLBACK TRANSACTION
+        END
+    END;
+
+-- the throw will return a message saying that review date can not be in the future. 
+
+-- create a trigger named tr_UpdateBookRating 
+-- first we have to add an average rating column to the Books table 
+--lets add the column first
+ALTER TABLE Books
+ADD AverageRating DECIMAL(3,2) DEFAULT 0;
+
+-- now lets create the trigger
+CREATE TRIGGER tr_UpdateBookRating
+ON BookReviews
+AFTER INSERT, UPDATE, DELETE
+AS 
+BEGIN
+    UPDATE Books
+    SET AverageRating = (
+        SELECT ISNULL(AVG(Rating),0)
+        FROM BookReviews
+        WHERE BookReviews.BookID = Books.BookID
+    )
+    WHERE BookID IN (
+        SELECT BookID FROM inserted
+        UNION
+        SELECT BookID FROM deleted
+    );
+END;
+
+-- test our work 
+-- first let's insert 3 reviews for different books 
+INSERT INTO BookReviews(ReviewID, BookID, CustomerID, Rating, ReviewText, ReviewDate)
+VALUES
+    (1, 1, 'ALFKI', 5, 'an amazing books that takes my breath away', '2025-1-20'),
+    (2, 2, 'ANATR', 3, 'it is a good book but not my type. well written.', '2024-4-7'),
+    (3, 3, 'ANTON', 5, 'it is a very nice book and i like the story. it is like reading my own life', '2023-10-24');
+
+-- try to insert a review with a future data to check our trigger for tr_validateReviewDate
+
+INSERT INTO BookReviews(ReviewID, BookID, CustomerID, Rating, ReviewText, ReviewDate)
+VALUES
+    (4, 4, 'BERGS', 2, 'not an interesting books', '2030-4-9');
+
+-- qurying the view to see the statistics
+SELECT * FROM vw_BookReviewStats;
+
+-- update a review's rating and verify the book's average rating update automatically
+
+UPDATE BookReviews
+SET Rating = 2
+WHERE ReviewID = 1;
