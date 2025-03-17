@@ -6,6 +6,7 @@
 SELECT FirstName, LastName, HireDate
 FROM Employees
 ORDER BY HireDate;
+GO
 
 /* 2. sql join
 Create a simple report showing which employees are handling orders. Write a query that:
@@ -30,6 +31,7 @@ INNER JOIN
 ORDER BY
     e.EmployeeID,
     o.OrderDate;
+GO
 
 /* 3. Functions and GROUP BY:
 Create a simple report showing total sales by product category. Include the CategoryName and TotalSales 
@@ -49,6 +51,7 @@ GROUP BY
     c.CategoryName
 ORDER BY
     TotalSales DESC;
+GO
 
 /* 4. SQL insert statements
 
@@ -92,6 +95,7 @@ VALUES(
     10,
     0
 );
+GO
 
 /* 5. SQL update statement 
 Update all products from supplier "Exotic Liquids" to belong to the new "Organic Products" category.
@@ -108,6 +112,7 @@ WHERE SupplierID = (
     FROM Suppliers
     WHERE CompanyName = 'Exotic Liquids'
 );
+GO
 
 /* 6. SQL Delete statement 
 Remove the product "Minneapolis Pizza".
@@ -115,6 +120,7 @@ Remove the product "Minneapolis Pizza".
 
 DELETE FROM Products
 WHERE ProductName = 'Minneapolis Pizza';
+GO
 
 /* 7. creating tables and constraints 
 Create a new table named "EmployeePerformance" with the following columns:
@@ -132,6 +138,7 @@ This will establish a relationship between Employees and EmployeePerformance.
 
 IF EXISTS (SELECT * FROM sys.tables WHERE name = 'EmployeePerformance')
     DROP TABLE EmployeePerformance;
+GO
 
 CREATE TABLE EmployeePerformance (
     PerformanceID INT IDENTITY(1,1) PRIMARY KEY,
@@ -141,9 +148,78 @@ CREATE TABLE EmployeePerformance (
     SalesTarget DECIMAL(15, 2),
     ActualSales DECIMAL(15, 2)
 );
+GO
 
 /* 8. creating views
 Create a view named "vw_ProductInventory" that shows ProductName, CategoryName, UnitsInStock, and UnitsOnOrder for all products.
 */
+
+IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_ProductInventory')
+    DROP VIEW vw_ProductInventory;
+GO
+
+CREATE VIEW vw_ProductInventory AS 
+SELECT 
+    p.ProductName,
+    c.CategoryName,
+    p.UnitsInStock,
+    p.UnitsOnOrder
+FROM 
+    Products P 
+INNER JOIN
+    Categories c ON p.CategoryID = c.CategoryID;
+
+GO
+
+/* 9. stored procedures
+Create a stored procedure called "sp_UpdateProductInventory" that:
+
+Takes two inputs: ProductID and NewStockLevel
+Updates the UnitsInStock value for the product you specify
+Makes sure the stock level is never less than zero
+*/
+
+CREATE PROCEDURE sp_UpdateProductInventory
+    @ProductID INT,
+    @NewStockLevel INT
+AS
+BEGIN
+    -- ensuring the new stock level can't be negative 
+    IF @NewStockLevel < 0
+    BEGIN
+        PRINT 'Stock level can not be negative.';
+        RETURN;
+    END
+
+    --update the UnitInStock for the product
+    UPDATE Products
+    SET UnitsInStock = @NewStockLevel
+    WHERE ProductID = @ProductID;
+
+    PRINT 'Stock level updated sucessfully.';
+END;
+
+GO
+
+/* 10. complex query
+Write a query to find the top 5 customers by total freight costs. Include CustomerID, TotalFreightCost, NumberOfOrders, 
+and AverageFreightPerOrder. 
+*/
+
+SELECT TOP 5
+    c.CustomerID,
+    SUM(o.Freight) AS TotalFreightCost,
+    COUNT(o.OrderID) AS NumberOfOrders,
+    AVG(o.Freight) AS AverageFreightPerOrder
+FROM
+    Customers AS c
+JOIN
+    Orders AS o ON c.CustomerID = o.CustomerID
+GROUP BY
+    c.CustomerID
+ORDER BY
+    TotalFreightCost DESC;
+
+GO
 
 
